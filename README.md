@@ -22,8 +22,13 @@ sandbox/
 ├── .gitattributes          haelt LF-Zeilenenden fuer den Container
 ├── config/
 │   ├── commands/           die geteilten Befehle - eine Quelle fuer beide
-│   │   ├── plan-item.md
-│   │   └── implement-item.md
+│   │   ├── create-item.md      Issue sauber anlegen
+│   │   ├── plan-item.md        Umsetzungsplan als Issue-Kommentar
+│   │   ├── replan-item.md      Plan nach neuen Kommentaren ueberarbeiten
+│   │   ├── implement-item.md   Plan umsetzen, Pull Request anlegen
+│   │   ├── review-pr.md        Pull Request vor dem Merge pruefen
+│   │   ├── address-review.md   Review-Befunde und rote Checks abarbeiten
+│   │   └── item-status.md      Phase und naechster Schritt (nur lesend)
 │   ├── skills/             duenne SKILL.md-Huellen auf dieselben Texte
 │   ├── opencode/opencode.json   Konfiguration inkl. GitHub-MCP-Server
 │   └── claude/settings.json Vorlage fuer Claude Code
@@ -240,28 +245,113 @@ cd /work/mein-repo
 opencode        # oder: claude
 ```
 
-Im TUI:
+### Der Ablauf im Ueberblick
 
 ```
-/plan-item 42
+            +------------- /item-status  (jederzeit, nur lesend) ---------------+
+            v                                                                    |
+ Idee --> /create-item --> /plan-item --> neue Kommentare? --ja--> /replan-item  |
+                                |              | nein                   |        |
+                                +--------------+--> /implement-item <---+        |
+                                                          | PR offen             |
+                                                          v                      |
+                                       +------> /review-pr --- mergebar ---> Merge (von Hand)
+                                       |             |
+                                       |        nachbessern
+                                       |             v
+                                       +---- /address-review
 ```
 
-Der Agent liest Issue #42 samt Kommentaren, sieht sich den Code an und schreibt
-einen Plan als Kommentar ins Issue. Dessen erste Zeile lautet
-`## Umsetzungsplan` - daran findet ihn der naechste Schritt wieder. Code aendert
-er dabei nicht.
+Jeder Schritt legt sein Ergebnis in GitHub ab und der naechste findet es dort
+wieder - kein Befehl braucht den Chatverlauf eines anderen. Die Uebergaben:
 
-```
-/implement-item 42
-```
+| Befehl | liest | schreibt | Marker |
+|---|---|---|---|
+| `/create-item "Idee"` | Vorlagen, Labels, vorhandene Issues | neues Issue mit *Akzeptanzkriterien* | - |
+| `/plan-item 42` | Issue, Code | Plan-Kommentar, *Definition of Done* aus den Akzeptanzkriterien | `## Umsetzungsplan` |
+| `/replan-item 42` | alles nach dem Stand des Plans | denselben Plan-Kommentar (neue Version) + kurzen Hinweis | `## Umsetzungsplan`, `### Umsetzungsplan aktualisiert` |
+| `/implement-item 42` | Plan | Branch `feature/42-<slug>`, Commits `Refs #42`, PR `Closes #42` | - |
+| `/review-pr 57` | PR, Issue, Plan, CI, Antworten in Threads | Review mit Inline-Kommentaren und Empfehlung; abgelehnte Antworten | `## Review`, `**Bleibt offen**` |
+| `/address-review 57` | letztes Review, offene Threads, rote Checks | Fix-Commits, Antworten in den Threads | `**Umgesetzt**`, `**Widersprochen**`, `**Zurueckgestellt**` |
+| `/item-status [42]` | alles oben | nichts | - |
 
-Der Agent holt den Plan aus dem Issue, legt `feature/42-<slug>` an, arbeitet die
-Schritte ab, laesst Tests und Linter laufen, committet mit `Refs #42` und
-oeffnet einen Pull Request mit `Closes #42`.
+`/create-item`, `/replan-item`, `/review-pr` und `/address-review` zeigen vor
+jedem Schreiben auf GitHub einen Entwurf und warten auf Zustimmung.
+`/plan-item` und `/implement-item` arbeiten ohne diesen Zwischenstopp: Der Plan
+ist ein Kommentar, der sich jederzeit nachziehen laesst, und die Umsetzung
+endet in einem Pull Request, der erst geprueft wird. Gemergt wird von keinem
+Befehl.
 
-Beide Befehle liegen als Textdateien in `config/commands/` und gelten fuer beide
+### Die Schritte im Einzelnen
+
+**1. Anlegen.** `/create-item "Rechnungsliste als CSV exportieren"` bestimmt
+die Art (Bug, Feature, Wartung), sucht nach Duplikaten, stellt hoechstens drei
+Rueckfragen und legt nach Freigabe ein Issue mit *Problem / Kontext*, *Ziel*,
+pruefbaren *Akzeptanzkriterien* und *Nicht Teil dieses Issues* an. Bei Bugs
+kommen *Reproduktion*, *Erwartet / Tatsaechlich* und *Umgebung* dazu. Gibt es
+Issue-Vorlagen im Repository, werden sie verwendet.
+
+**2. Planen.** `/plan-item 42` liest Issue und Code und schreibt einen
+Kommentar, dessen erste Zeile `## Umsetzungsplan` lautet. Code aendert er
+nicht. Die *Definition of Done* uebernimmt die Akzeptanzkriterien.
+
+**3. Nachplanen.** Kommen danach Antworten auf offene Punkte, neue Wuensche oder
+eine geaenderte Beschreibung dazu, zieht `/replan-item 42` den Plan nach: Er
+ordnet jeden neuen Beitrag ein, bearbeitet den bestehenden Plan-Kommentar,
+fuehrt eine *Aenderungshistorie* (v1, v2, ...) und postet einen kurzen Hinweis,
+weil das Bearbeiten eines Kommentars niemanden benachrichtigt. Gibt es schon
+einen Branch oder PR, bleiben erledigte Schritte stehen und Neues kommt dazu.
+
+**4. Umsetzen.** `/implement-item 42` prueft zuerst, ob der Plan noch aktuell
+ist, und verweist sonst auf `/replan-item`. Dann legt er `feature/42-<slug>`
+an, arbeitet die Schritte ab, laesst Tests und Linter laufen, committet mit
+`Refs #42` und oeffnet einen Pull Request mit `Closes #42`.
+
+**5. Pruefen.** `/review-pr 57` prueft den PR in einem eigenen Worktree unter
+`/tmp` - der eigene Arbeitsstand bleibt unberuehrt - gegen Akzeptanzkriterien
+und Plan, auf Korrektheit, Tests und Sicherheit. Das Ergebnis ist ein Review,
+das mit `## Review` beginnt, eine Abdeckungstabelle, Befunde als *Blocker*,
+*Sollte* oder *Hinweis* und eine Empfehlung: *mergebar*, *mergebar nach
+manueller Pruefung* (kein Blocker, aber eine Pruefung, die nur ein Mensch machen
+kann, etwa unter Windows) oder *nachbessern*.
+
+Das Review wird immer als Kommentar eingestellt: Laeuft alles ueber dasselbe
+Token, ist man meist selbst Autor des PRs, und GitHub erlaubt bei eigenen PRs
+weder *Approve* noch *Request changes*.
+
+**6. Nachbessern.** `/address-review 57` sammelt die Befunde des letzten
+Reviews, offene Threads und rote CI-Checks, schlaegt je Punkt *umsetzen*,
+*widersprechen* oder *zurueckstellen* vor, committet die Korrekturen auf den
+PR-Branch und beantwortet jeden Thread. Aufgeloest werden die Threads vom
+Reviewer, nicht vom Befehl; beantwortete Threads blockieren aber nicht mehr.
+Erkannt wird das an der ersten Zeile der Antwort (`**Umgesetzt**`,
+`**Widersprochen**`, `**Zurueckgestellt**`), nicht am Login - laeuft alles ueber
+ein Token, heissen Reviewer und Autor gleich. Lehnt `/review-pr` eine Antwort ab,
+antwortet es mit `**Bleibt offen**`, und der Thread zaehlt wieder als offen.
+Danach wieder `/review-pr 57` - es bewertet auch die Antworten in den Threads -,
+bis die Empfehlung *mergebar* lautet.
+
+**7. Mergen** bleibt Handarbeit - im Browser oder mit `gh pr merge`.
+
+**Jederzeit:** `/item-status` zeigt alle offenen Issues mit Phase
+(*Ungeplant*, *Geplant*, *Plan veraltet*, *Wartet auf Antwort*, *Review offen*,
+*Review veraltet*, *Nachbessern*, *Konflikt*, *Manuelle Pruefung*, *Mergebar*)
+und dem naechsten Befehl; `/item-status 42` zeigt ein Issue im Detail.
+
+Alle Befehle liegen als Textdateien in `config/commands/` und gelten fuer beide
 Agenten gleichermassen - siehe [Geteilte Befehle](#geteilte-befehle).
 Aenderungen wirken beim naechsten Start der jeweiligen CLI, ohne Rebuild.
+
+### Arbeiten in einem Fork
+
+In einem Fork zielen `gh issue ...` und `gh pr create` ohne weitere Angabe auf
+das **Original**, nicht auf den Fork. Die Befehle ermitteln deshalb in Schritt 0
+das Ziel-Repository aus `origin`, geben es bei jedem Aufruf mit `--repo` an und
+fragen in einem Fork einmal nach, wohin Issues und Pull Requests gehen sollen.
+
+Bei Forks sind Issues auf GitHub zunaechst abgeschaltet. Wer im Fork mit Issues
+arbeiten will, schaltet sie unter *Settings -> General -> Features -> Issues*
+ein; `/item-status` weist darauf hin.
 
 ### Project-Boards
 

@@ -17,9 +17,14 @@ if [ -z "${SANDBOX_MOTD_SHOWN:-}" ] && [ -t 1 ]; then
   _have claude   && echo "  claude               Claude Code"
   echo "  gh repo clone O/R    Repository nach /work holen"
   echo
-  echo "  Gemeinsame Befehle in allen dreien:"
-  echo "    /plan-item <Nr>      Item vom Board planen"
-  echo "    /implement-item <Nr> Item umsetzen und PR anlegen"
+  echo "  Gemeinsame Befehle in beiden Agenten:"
+  echo "    /create-item \"Idee\"    Issue sauber anlegen"
+  echo "    /plan-item <Nr>        Issue planen, Plan als Kommentar"
+  echo "    /replan-item <Nr>      Plan nach neuen Kommentaren ueberarbeiten"
+  echo "    /implement-item <Nr>   Plan umsetzen und PR anlegen"
+  echo "    /review-pr <PR>        PR vor dem Merge pruefen"
+  echo "    /address-review <PR>   Review-Befunde und rote Checks abarbeiten"
+  echo "    /item-status [Nr]      Stand und naechster Schritt"
   echo
   if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
     echo "  Anthropic:  API-Key gesetzt"

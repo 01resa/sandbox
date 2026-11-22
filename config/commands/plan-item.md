@@ -17,15 +17,29 @@ Fuehre das zuerst aus und verwende die Ausgabe in allen weiteren Schritten:
 
 ```sh
 echo "Verzeichnis: $(pwd)"
-echo "Repository:  $(git remote get-url origin 2>/dev/null || echo 'kein Git-Repository')"
+R="$(gh repo view "$(git remote get-url origin 2>/dev/null)" --json nameWithOwner -q .nameWithOwner 2>/dev/null)"
+echo "Ziel-Repo:   ${R:-nicht ermittelbar (kein Git-Repository oder kein origin)}"
+[ -n "$R" ] && gh repo view "$R" --json isFork,parent \
+  -q 'if .isFork then "Fork:        ja, von \(.parent.owner.login)/\(.parent.name)" else "Fork:        nein" end'
 echo "Branch:      $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '-')"
 ```
+
+Den Wert `Ziel-Repo` gibst du bei **jedem** `gh`-Aufruf mit `--repo` an. In
+einem Fork zielt `gh` sonst auf das Original.
 
 ## Vorgehen
 
 1. **Issue lesen.** Titel, Beschreibung, Labels, vorhandene Kommentare und
    verlinkte Pull Requests - ueber die GitHub-Werkzeuge des MCP-Servers oder
-   `gh issue view <nr> --comments`.
+   `gh issue view <nr> --repo <Ziel-Repo> --comments`.
+
+   Gibt es bereits einen Kommentar, der mit `## Umsetzungsplan` beginnt, wird
+   nicht neu geplant:
+   - Sind danach weitere Kommentare entstanden oder wurde die Beschreibung
+     geaendert, brich ab und verweise auf `/replan-item <nummer>`.
+   - Sonst melde, dass der Plan aktuell ist, und frage, ob er trotzdem
+     vollstaendig neu geschrieben werden soll. Nur bei ausdruecklicher
+     Zustimmung weiter.
 
 2. **Code verstehen.** Suche die betroffenen Stellen im Repository, sieh dir
    vergleichbare Implementierungen an und lies die Build- und Testbefehle aus
@@ -41,16 +55,23 @@ echo "Branch:      $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '-')"
    - *Schritte* - nummeriert, jeder einzeln umsetzbar und ueberpruefbar
    - *Tests* - welche, wie ausgefuehrt, was neu dazukommt
    - *Offene Punkte*
-   - *Definition of Done*
+   - *Definition of Done* - uebernimmt die `### Akzeptanzkriterien` des Issues
+     als Checkliste und ergaenzt Tests, Doku und Build; fehlen
+     Akzeptanzkriterien, leite sie aus dem Issue ab und nenne das unter
+     *Offene Punkte*
+   - *Aenderungshistorie* - beim ersten Plan genau eine Zeile:
+     `- **v1** (JJJJ-MM-TT): erster Plan`
 
 5. **Plan ins Issue schreiben.** Als Kommentar, dessen erste Zeile genau
    `## Umsetzungsplan` lautet - daran findet `/implement-item` ihn spaeter
-   wieder. Gibt es bereits so einen Kommentar, aktualisiere ihn, statt einen
+   wieder. Wird ein bestehender Plan auf ausdruecklichen Wunsch neu
+   geschrieben (siehe Schritt 1), bearbeite diesen Kommentar, statt einen
    zweiten anzulegen.
 
 6. **Zusammenfassung.** Fuenf bis zehn Zeilen: was geplant ist und was als
    naechstes zu entscheiden waere. Schliesse mit dem Hinweis, dass die
-   Umsetzung ueber `/implement-item <nummer>` laeuft.
+   Umsetzung ueber `/implement-item <nummer>` laeuft - und dass nach Antworten
+   auf die offenen Punkte `/replan-item <nummer>` den Plan nachzieht.
 
 ## Regeln
 
