@@ -275,8 +275,12 @@ wieder - kein Befehl braucht den Chatverlauf eines anderen. Die Uebergaben:
 | `/address-review 57` | letztes Review, offene Threads, rote Checks | Fix-Commits, Antworten in den Threads | - |
 | `/item-status [42]` | alles oben | nichts | - |
 
-Alle Befehle, die auf GitHub schreiben, zeigen vorher einen Entwurf und warten
-auf Zustimmung. Gemergt wird von keinem Befehl.
+`/create-item`, `/replan-item`, `/review-pr` und `/address-review` zeigen vor
+jedem Schreiben auf GitHub einen Entwurf und warten auf Zustimmung.
+`/plan-item` und `/implement-item` arbeiten ohne diesen Zwischenstopp: Der Plan
+ist ein Kommentar, der sich jederzeit nachziehen laesst, und die Umsetzung
+endet in einem Pull Request, der erst geprueft wird. Gemergt wird von keinem
+Befehl.
 
 ### Die Schritte im Einzelnen
 
