@@ -211,6 +211,7 @@ AUTH
     echo "Compose:    $(docker compose version --short 2>/dev/null || echo '?')"
     echo "Image:      $(image_name) $(image_exists && echo 'vorhanden' || echo 'fehlt')"
     echo "Container:  $(container_running && echo 'laeuft' || echo 'laeuft nicht')"
+    rc=0
     if container_running; then
       echo
       docker compose exec -T "$SERVICE" bash -lc '
@@ -226,13 +227,27 @@ AUTH
         echo "    -> opencode:     $(ls -1 $HOME/.config/opencode/commands/*.md 2>/dev/null | wc -l | tr -d " ")"
         echo "    -> claude:       $(ls -1 $HOME/.claude/commands/*.md 2>/dev/null | wc -l | tr -d " ")"
         echo "  Skills:            $(ls -1d $HOME/.claude/skills/*/ 2>/dev/null | wc -l | tr -d " ")"
+        missing=""
+        for f in /opt/agent-commands/*.md; do
+          [ -e "$f" ] || continue
+          n="$(basename "$f" .md)"
+          [ -f "$HOME/.claude/skills/$n/SKILL.md" ] || missing="$missing $n"
+        done
+        if [ -z "$missing" ]; then
+          echo "  Skill-Huellen:     vollstaendig"
+        else
+          echo "  Skill-Huellen:     fehlen fuer $(echo $missing | wc -w | tr -d " ") Befehl(e)"
+          for n in $missing; do echo "    -> $n"; done
+        fi
         echo "  GitHub-Token:      $([ -n "${GH_TOKEN:-}" ] && echo gesetzt || echo fehlt)"
         echo "  Anthropic-Key:     $([ -n "${ANTHROPIC_API_KEY:-}" ] && echo gesetzt || echo fehlt)"
         echo "  Claude-Anmeldung:  $([ -f "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.credentials.json" ] && echo vorhanden || echo fehlt)"
-      '
+        [ -z "$missing" ]
+      ' || rc=$?
     else
       warn "Fuer den vollstaendigen Test: ./sandbox.sh start"
     fi
+    exit "$rc"
     ;;
   down)
     docker compose down

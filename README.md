@@ -370,7 +370,7 @@ noch aktiv - die Werkzeuge sind also da, falls spaeter doch ein Board dazukommt.
 ./sandbox.sh clone owner/repo
 ./sandbox.sh gh pr list
 ./sandbox.sh status
-./sandbox.sh doctor      # Selbsttest: Docker, Image, Werkzeuge im Container
+./sandbox.sh doctor      # Selbsttest: Docker, Image, Werkzeuge; Exit 1, wenn Skill-Huellen fehlen
 ./sandbox.sh setup-mcp   # GitHub-MCP bei Claude Code eintragen
 ./sandbox.sh reseed      # Vorlagen aus config/ neu in den Container kopieren
 ./sandbox.sh stop

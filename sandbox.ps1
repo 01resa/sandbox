@@ -319,11 +319,27 @@ Alternativ den Schluessel in die .env eintragen:
         echo "  Befehle (Quelle):  $(ls -1 /opt/agent-commands/*.md 2>/dev/null | wc -l | tr -d " ")"
         echo "    -> opencode:     $(ls -1 $HOME/.config/opencode/commands/*.md 2>/dev/null | wc -l | tr -d " ")"
         echo "    -> claude:       $(ls -1 $HOME/.claude/commands/*.md 2>/dev/null | wc -l | tr -d " ")"
+        echo "  Skills:            $(ls -1d $HOME/.claude/skills/*/ 2>/dev/null | wc -l | tr -d " ")"
+        missing=""
+        for f in /opt/agent-commands/*.md; do
+          [ -e "$f" ] || continue
+          n="$(basename "$f" .md)"
+          [ -f "$HOME/.claude/skills/$n/SKILL.md" ] || missing="$missing $n"
+        done
+        if [ -z "$missing" ]; then
+          echo "  Skill-Huellen:     vollstaendig"
+        else
+          echo "  Skill-Huellen:     fehlen fuer $(echo $missing | wc -w | tr -d " ") Befehl(e)"
+          for n in $missing; do echo "    -> $n"; done
+        fi
         echo "  GitHub-Token:      $([ -n "${GH_TOKEN:-}" ] && echo gesetzt || echo fehlt)"
         echo "  Anthropic-Key:     $([ -n "${ANTHROPIC_API_KEY:-}" ] && echo gesetzt || echo fehlt)"
         echo "  Claude-Anmeldung:  $([ -f "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.credentials.json" ] && echo vorhanden || echo fehlt)"
+        [ -z "$missing" ]
     '
-            & docker compose exec -T $Service bash -lc $probe
+            # Die Datei hat CRLF-Zeilenenden; bash im Container braucht reine LF
+            & docker compose exec -T $Service bash -lc ($probe -replace "`r", '')
+            exit $LASTEXITCODE
         } else {
             Write-Host 'Container:  laeuft nicht'
             Write-Warn 'Fuer den vollstaendigen Test: .\sandbox.ps1 start'
