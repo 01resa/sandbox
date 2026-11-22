@@ -74,12 +74,16 @@ Sind Issues abgeschaltet, sage das und beende den Durchgang.
    | *Review veraltet* | PR vorhanden, Review aelter als `last_commit` | `/review-pr <pr>` |
    | *Review offen* | PR vorhanden, kein `## Review` | `/review-pr <pr>` (bei Entwurf: erst fertigstellen) |
    | *Plan veraltet* | Plan vorhanden und `last_comment` oder `body_edited` nach `plan` | `/replan-item <nr>` |
-   | *Wartet auf Antwort* | Plan vorhanden, unter *Offene Punkte* stehen echte, unbeantwortete Fragen | Antworten im Issue abwarten, dann `/replan-item <nr>` |
+   | *Wartet auf Antwort* | Plan vorhanden, unter *Offene Punkte* steht mindestens ein Punkt **ohne** *Vorschlag* | Antworten im Issue abwarten, dann `/replan-item <nr>` |
    | *Geplant* | Plan vorhanden, sonst nichts | `/implement-item <nr>` |
    | *Ungeplant* | kein Plan | `/plan-item <nr>` |
 
    CI `PENDING` vermerkst du als "Checks laufen" und nimmst die Phase, die
    ohne CI-Bedingung zutrifft.
+
+   Offene Punkte, die einen *Vorschlag* enthalten, blockieren nicht:
+   `/implement-item` uebernimmt den Vorschlag. Nenne sie in der Detailansicht
+   trotzdem, damit der Nutzer vorher widersprechen kann.
 
 3. **Ausgeben.**
    - **Uebersicht:** eine Tabelle mit den Spalten Issue, Titel (gekuerzt),

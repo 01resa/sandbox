@@ -60,6 +60,10 @@ gegen das Original gehen soll; voreingestellt ist der Fork.
    und halte dich an die vorhandenen Muster im Projekt. Weicht die Umsetzung vom
    Plan ab, halte die Abweichung mit Begruendung fest.
 
+   *Offene Punkte* des Plans: Hat ein Punkt einen *Vorschlag*, uebernimm ihn und
+   nenne ihn im PR-Text als getroffene Entscheidung. Hat er keinen, frage nach,
+   bevor du den betroffenen Schritt umsetzt.
+
 4. **Pruefen.** Fuehre Tests, Linter und Build aus, so wie es das Projekt
    vorsieht. Gibt es keine Tests fuer den geaenderten Bereich, lege welche an,
    sofern das zum Projekt passt. Erst weiter, wenn alles gruen ist.

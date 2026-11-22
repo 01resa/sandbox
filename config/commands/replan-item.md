@@ -114,6 +114,13 @@ setzt ihn in `repos/<Ziel-Repo>/...` ein.
    zweiten anlegen. Die erste Zeile bleibt genau `## Umsetzungsplan` - daran
    findet `/implement-item` den Plan wieder.
 
+   Soll auf ausdruecklichen Wunsch des Nutzers auch die Issue-Beschreibung
+   angepasst werden (etwa weil ein Kommentar Ziel oder Abgrenzung aendert),
+   geschieht das **vor** dem Bearbeiten des Plans
+   (`gh issue edit <nr> --repo <Ziel-Repo> --body-file <datei>`). Andernfalls
+   ist die Beschreibung juenger als der Plan, und `/item-status` und
+   `/implement-item` melden den frischen Plan sofort als veraltet.
+
    ```sh
    gh api -X PATCH "repos/<Ziel-Repo>/issues/comments/<id>" -F body=@<datei>
    ```
@@ -135,7 +142,11 @@ setzt ihn in `repos/<Ziel-Repo>/...` ein.
 
 - Keine Codeaenderungen, keine Commits, keine Branches, keine Pull Requests.
 - Nur den Plan-Kommentar bearbeiten - niemals Kommentare anderer Personen
-  aendern oder loeschen.
+  aendern oder loeschen. Die Issue-Beschreibung nur auf ausdruecklichen Wunsch
+  und nur vor dem Plan (siehe Schritt 7).
+- Jeder offene Punkt bekommt nach Moeglichkeit einen *Vorschlag*. Ein Punkt mit
+  Vorschlag blockiert die Umsetzung nicht; ein Punkt ohne Vorschlag ist eine
+  echte Frage, auf die gewartet wird.
 - Was du nicht sicher weisst, gehoert unter *Offene Punkte* - nicht in die
   Schritte.
 - Schreibe den Plan so, dass ihn jemand ohne diesen Chatverlauf abarbeiten kann.
