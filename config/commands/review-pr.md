@@ -65,11 +65,15 @@ Den Wert `Ziel-Repo` (`<owner>/<repo>`) gibst du bei **jedem** `gh`-Aufruf mit
        --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved | not)'
      ```
 
-     Hat der Autor geantwortet (etwa ueber `/address-review`), bewerte die
-     Antwort: Ist der Befund behoben oder die Begruendung fuer *widersprochen*
-     bzw. *zurueckgestellt* tragfaehig, sage das im Review ausdruecklich und
-     empfiehl dem Nutzer, den Thread aufzuloesen. Sonst bleibt der Befund
-     bestehen.
+     Beginnt der letzte Kommentar eines Threads mit `**Umgesetzt**`,
+     `**Widersprochen**` oder `**Zurueckgestellt**`, ist er beantwortet
+     (so antwortet `/address-review`). Bewerte die Antwort:
+     - **tragfaehig** - Befund behoben bzw. Begruendung ueberzeugt: sage das im
+       Review ausdruecklich und empfiehl dem Nutzer, den Thread aufzuloesen.
+     - **nicht tragfaehig** - der Befund bleibt bestehen; beim Einstellen des
+       Reviews (Schritt 7) antwortest du im Thread mit einer Zeile, die mit
+       `**Bleibt offen**` beginnt, und der Begruendung. Erst damit gilt der
+       Thread fuer `/item-status` und `/address-review` wieder als offen.
 
    Gibt es kein verknuepftes Issue oder keinen Plan, pruefe trotzdem und halte
    im Review fest, dass der Massstab fehlt.
@@ -174,6 +178,13 @@ Den Wert `Ziel-Repo` (`<owner>/<repo>`) gibst du bei **jedem** `gh`-Aufruf mit
    Inline-Kommentare sind nur auf Zeilen moeglich, die im Diff vorkommen.
    Lehnt GitHub einen Kommentar ab (HTTP 422), nimm ihn aus `comments` heraus;
    er steht ohnehin unter *Befunde* im Review-Text.
+
+   Antworten `**Bleibt offen**` aus Schritt 2 gehen danach einzeln an den
+   jeweiligen Thread (erste Kommentar-ID des Threads):
+
+   ```sh
+   gh api -X POST "repos/<Ziel-Repo>/pulls/<pr>/comments/<id>/replies" -f body="**Bleibt offen** - ..."
+   ```
 
 8. **Zusammenfassung.** Empfehlung, Anzahl Befunde je Stufe, Review-URL.
    Naechster Schritt: bei *nachbessern* `/address-review <pr>`; bei

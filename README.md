@@ -271,8 +271,8 @@ wieder - kein Befehl braucht den Chatverlauf eines anderen. Die Uebergaben:
 | `/plan-item 42` | Issue, Code | Plan-Kommentar, *Definition of Done* aus den Akzeptanzkriterien | `## Umsetzungsplan` |
 | `/replan-item 42` | alles nach dem Stand des Plans | denselben Plan-Kommentar (neue Version) + kurzen Hinweis | `## Umsetzungsplan`, `### Umsetzungsplan aktualisiert` |
 | `/implement-item 42` | Plan | Branch `feature/42-<slug>`, Commits `Refs #42`, PR `Closes #42` | - |
-| `/review-pr 57` | PR, Issue, Plan, CI | Review mit Inline-Kommentaren und Empfehlung | `## Review` |
-| `/address-review 57` | letztes Review, offene Threads, rote Checks | Fix-Commits, Antworten in den Threads | - |
+| `/review-pr 57` | PR, Issue, Plan, CI, Antworten in Threads | Review mit Inline-Kommentaren und Empfehlung; abgelehnte Antworten | `## Review`, `**Bleibt offen**` |
+| `/address-review 57` | letztes Review, offene Threads, rote Checks | Fix-Commits, Antworten in den Threads | `**Umgesetzt**`, `**Widersprochen**`, `**Zurueckgestellt**` |
 | `/item-status [42]` | alles oben | nichts | - |
 
 `/create-item`, `/replan-item`, `/review-pr` und `/address-review` zeigen vor
@@ -324,6 +324,10 @@ Reviews, offene Threads und rote CI-Checks, schlaegt je Punkt *umsetzen*,
 *widersprechen* oder *zurueckstellen* vor, committet die Korrekturen auf den
 PR-Branch und beantwortet jeden Thread. Aufgeloest werden die Threads vom
 Reviewer, nicht vom Befehl; beantwortete Threads blockieren aber nicht mehr.
+Erkannt wird das an der ersten Zeile der Antwort (`**Umgesetzt**`,
+`**Widersprochen**`, `**Zurueckgestellt**`), nicht am Login - laeuft alles ueber
+ein Token, heissen Reviewer und Autor gleich. Lehnt `/review-pr` eine Antwort ab,
+antwortet es mit `**Bleibt offen**`, und der Thread zaehlt wieder als offen.
 Danach wieder `/review-pr 57` - es bewertet auch die Antworten in den Threads -,
 bis die Empfehlung *mergebar* lautet.
 

@@ -55,9 +55,11 @@ Den Wert `Ziel-Repo` (`<owner>/<repo>`) gibst du bei **jedem** `gh`-Aufruf mit
      ```
 
      Die `databaseId` des **ersten** Kommentars eines Threads brauchst du
-     spaeter fuer die Antwort. Threads, deren letzter Kommentar vom PR-Autor
-     stammt und nach dem letzten `## Review` liegt, sind bereits beantwortet -
-     nenne sie, bearbeite sie aber nicht erneut.
+     spaeter fuer die Antwort. Threads, deren **letzter** Kommentar mit
+     `**Umgesetzt**`, `**Widersprochen**` oder `**Zurueckgestellt**` beginnt,
+     sind bereits beantwortet - nenne sie, bearbeite sie aber nicht erneut.
+     Beginnt der letzte Kommentar mit `**Bleibt offen**`, hat das Review die
+     Antwort nicht akzeptiert; der Thread ist wieder zu bearbeiten.
 
    - **Rote Checks:**
 
@@ -106,9 +108,13 @@ Den Wert `Ziel-Repo` (`<owner>/<repo>`) gibst du bei **jedem** `gh`-Aufruf mit
 7. **Pushen.** Normaler Push auf den PR-Branch, kein Force-Push:
    `git push`.
 
-8. **Threads beantworten.** Zu jedem bearbeiteten Thread eine Antwort - mit
-   Commit-Link bei *umgesetzt*, mit Begruendung bei *widersprochen* oder
-   *zurueckgestellt*:
+8. **Threads beantworten.** Zu jedem bearbeiteten Thread eine Antwort. Sie
+   beginnt mit **genau einem** dieser Marker - daran erkennen `/item-status`
+   und `/review-pr` den Thread als beantwortet:
+   - `**Umgesetzt**` - mit Commit-Link
+   - `**Widersprochen**` - mit Begruendung
+   - `**Zurueckgestellt**` - mit Begruendung und, wo passend, dem Vorschlag
+     fuer ein eigenes Issue
 
    ```sh
    gh api -X POST "repos/<Ziel-Repo>/pulls/<pr>/comments/<databaseId>/replies" -f body="..."

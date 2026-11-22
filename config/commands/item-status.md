@@ -41,19 +41,19 @@ Sind Issues abgeschaltet, sage das und beende den Durchgang.
          number title lastEditedAt
          comments(last:50){nodes{createdAt lastEditedAt body}}
          closedByPullRequestsReferences(first:5,includeClosedPrs:false){nodes{
-           number isDraft mergeable headRefName author{login}
+           number isDraft mergeable headRefName
            commits(last:1){nodes{commit{committedDate statusCheckRollup{state}}}}
            reviews(last:20){nodes{createdAt body}}
-           reviewThreads(first:100){nodes{isResolved comments(last:1){nodes{author{login} createdAt}}}}}}}}}}' \
+           reviewThreads(first:100){nodes{isResolved comments(last:1){nodes{body}}}}}}}}}}' \
      --jq '.data.repository.issues.nodes[] | {
        issue: .number, title, body_edited: .lastEditedAt,
        plan: ([.comments.nodes[] | select(.body | startswith("## Umsetzungsplan")) | (.lastEditedAt // .createdAt)] | last),
        plan_body: ([.comments.nodes[] | select(.body | startswith("## Umsetzungsplan")) | .body] | last),
        last_comment: ([.comments.nodes[] | select(.body | test("^(## Umsetzungsplan|### Umsetzungsplan aktualisiert|## Review)") | not) | .createdAt] | last),
-       prs: [.closedByPullRequestsReferences.nodes[] | .author.login as $a
+       prs: [.closedByPullRequestsReferences.nodes[]
          | ([.reviews.nodes[] | select(.body | startswith("## Review"))] | last) as $rv
          | [.reviewThreads.nodes[] | select(.isResolved | not)
-            | {answered: (($rv != null) and (.comments.nodes[0].author.login == $a) and (.comments.nodes[0].createdAt > $rv.createdAt))}] as $th
+            | {answered: (.comments.nodes[0].body | test("^\\*\\*(Umgesetzt|Widersprochen|Zurueckgestellt)"))}] as $th
          | {
          pr: .number, draft: .isDraft, mergeable, branch: .headRefName,
          ci: (.commits.nodes[0].commit.statusCheckRollup.state // "KEINE"),
@@ -73,10 +73,14 @@ Sind Issues abgeschaltet, sage das und beende den Durchgang.
      kein Fehler.
    - `open_threads`: nicht aufgeloeste Threads, die **noch nicht beantwortet**
      sind.
-   - `answered_threads`: nicht aufgeloeste Threads, deren letzter Kommentar vom
-     PR-Autor stammt und nach dem letzten `## Review` liegt - typischerweise
-     von `/address-review` beantwortet. Sie blockieren nicht; aufloesen muss sie
-     der Reviewer.
+   - `answered_threads`: nicht aufgeloeste Threads, deren **letzter** Kommentar
+     mit `**Umgesetzt**`, `**Widersprochen**` oder `**Zurueckgestellt**`
+     beginnt - so antwortet `/address-review`. Sie blockieren nicht; aufloesen
+     muss sie der Reviewer. Antwortet `/review-pr` darauf mit `**Bleibt offen**`,
+     ist der Thread wieder offen.
+
+     Erkannt wird das am Marker, nicht am Login: Laeuft alles ueber ein Token,
+     haben Reviewer und Autor denselben Namen.
 
 2. **Phase bestimmen.** Pruefe die Regeln **von oben nach unten**; die erste,
    die zutrifft, gilt:
