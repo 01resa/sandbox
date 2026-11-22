@@ -40,6 +40,10 @@ Den Wert `Ziel-Repo` (`<owner>/<repo>`) gibst du bei **jedem** `gh`-Aufruf mit
    gh pr checks <pr> --repo <Ziel-Repo>
    ```
 
+   Meldet `gh pr checks` "no checks reported" (mit Exit-Code ungleich 0), ist
+   im Repository keine CI eingerichtet. Das ist kein Befund; halte es unter
+   *Lokale Pruefung* fest.
+
    Ist der PR ein Entwurf (`isDraft`), weise darauf hin und frage, ob trotzdem
    geprueft werden soll.
 
@@ -50,6 +54,22 @@ Den Wert `Ziel-Repo` (`<owner>/<repo>`) gibst du bei **jedem** `gh`-Aufruf mit
      *Definition of Done* und *Aenderungshistorie*
    - fruehere Reviews mit erster Zeile `## Review` - bereits genannte Befunde
      pruefst du gezielt nach, statt sie neu zu erfinden
+   - nicht aufgeloeste Review-Threads samt Antworten:
+
+     ```sh
+     gh api graphql -F o=<owner> -F r=<repo> -F n=<pr> -f query='
+       query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){
+         pullRequest(number:$n){reviewThreads(first:100){nodes{
+           isResolved path line
+           comments(first:30){nodes{author{login} body url createdAt}}}}}}}' \
+       --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved | not)'
+     ```
+
+     Hat der Autor geantwortet (etwa ueber `/address-review`), bewerte die
+     Antwort: Ist der Befund behoben oder die Begruendung fuer *widersprochen*
+     bzw. *zurueckgestellt* tragfaehig, sage das im Review ausdruecklich und
+     empfiehl dem Nutzer, den Thread aufzuloesen. Sonst bleibt der Befund
+     bestehen.
 
    Gibt es kein verknuepftes Issue oder keinen Plan, pruefe trotzdem und halte
    im Review fest, dass der Massstab fehlt.
@@ -89,7 +109,13 @@ Den Wert `Ziel-Repo` (`<owner>/<repo>`) gibst du bei **jedem** `gh`-Aufruf mit
    warum, und ein konkreter Vorschlag. Melde nur, was du belegen kannst -
    lieber wenige sichere Befunde als viele vage.
 
-   **Empfehlung:** *mergebar*, wenn es keinen Blocker gibt, sonst *nachbessern*.
+   **Empfehlung** - genau eine von drei:
+   - *nachbessern*, wenn es mindestens einen Blocker gibt
+   - *mergebar nach manueller Pruefung*, wenn es keinen Blocker gibt, aber
+     Pruefungen offen sind, die nur ein Mensch machen kann (anderes
+     Betriebssystem, echte Infrastruktur, Geraete, Zugangsdaten) - etwa ein
+     DoD-Punkt, der sich in der Sandbox nicht pruefen laesst
+   - *mergebar* sonst
 
 6. **Entwurf zeigen und Freigabe einholen.** Zeige den Review-Text und die
    Inline-Kommentare. Poste erst, wenn der Nutzer zustimmt.
@@ -99,7 +125,7 @@ Den Wert `Ziel-Repo` (`<owner>/<repo>`) gibst du bei **jedem** `gh`-Aufruf mit
 
    ```
    ## Review
-   **Empfehlung: mergebar | nachbessern** - geprueft auf Stand <kurzer SHA>
+   **Empfehlung: mergebar | mergebar nach manueller Pruefung | nachbessern** - geprueft auf Stand <kurzer SHA>
 
    ### Abdeckung
    | Kriterium / Plan-Schritt | Stand | Fundstelle |
@@ -112,6 +138,14 @@ Den Wert `Ziel-Repo` (`<owner>/<repo>`) gibst du bei **jedem** `gh`-Aufruf mit
 
    ### Lokale Pruefung
    Tests / Linter / Build: Befehl und Ergebnis
+
+   ### Manuelle Pruefung
+   (nur bei *mergebar nach manueller Pruefung*) je Pruefung: Befehl,
+   Umgebung, erwartetes Ergebnis
+
+   ### Offene Threads
+   (nur wenn vorhanden) je Thread: beantwortet ja/nein, Bewertung der Antwort,
+   Empfehlung "aufloesen" oder "bleibt offen"
    ```
 
 7. **Review einstellen.** Als ein einziges Review mit Inline-Kommentaren. Die
@@ -142,8 +176,10 @@ Den Wert `Ziel-Repo` (`<owner>/<repo>`) gibst du bei **jedem** `gh`-Aufruf mit
    er steht ohnehin unter *Befunde* im Review-Text.
 
 8. **Zusammenfassung.** Empfehlung, Anzahl Befunde je Stufe, Review-URL.
-   Naechster Schritt: bei *nachbessern* `/address-review <pr>`, bei *mergebar*
-   der Merge durch den Nutzer.
+   Naechster Schritt: bei *nachbessern* `/address-review <pr>`; bei
+   *mergebar nach manueller Pruefung* die genannten Pruefungen, dann der Merge
+   durch den Nutzer; bei *mergebar* der Merge durch den Nutzer. Zum Aufloesen
+   empfohlene Threads nennst du mit Link.
 
 ## Regeln
 

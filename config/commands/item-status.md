@@ -41,21 +41,26 @@ Sind Issues abgeschaltet, sage das und beende den Durchgang.
          number title lastEditedAt
          comments(last:50){nodes{createdAt lastEditedAt body}}
          closedByPullRequestsReferences(first:5,includeClosedPrs:false){nodes{
-           number isDraft mergeable headRefName
+           number isDraft mergeable headRefName author{login}
            commits(last:1){nodes{commit{committedDate statusCheckRollup{state}}}}
            reviews(last:20){nodes{createdAt body}}
-           reviewThreads(first:100){nodes{isResolved}}}}}}}}' \
+           reviewThreads(first:100){nodes{isResolved comments(last:1){nodes{author{login} createdAt}}}}}}}}}}' \
      --jq '.data.repository.issues.nodes[] | {
        issue: .number, title, body_edited: .lastEditedAt,
        plan: ([.comments.nodes[] | select(.body | startswith("## Umsetzungsplan")) | (.lastEditedAt // .createdAt)] | last),
        plan_body: ([.comments.nodes[] | select(.body | startswith("## Umsetzungsplan")) | .body] | last),
        last_comment: ([.comments.nodes[] | select(.body | test("^(## Umsetzungsplan|### Umsetzungsplan aktualisiert|## Review)") | not) | .createdAt] | last),
-       prs: [.closedByPullRequestsReferences.nodes[] | {
+       prs: [.closedByPullRequestsReferences.nodes[] | .author.login as $a
+         | ([.reviews.nodes[] | select(.body | startswith("## Review"))] | last) as $rv
+         | [.reviewThreads.nodes[] | select(.isResolved | not)
+            | {answered: (($rv != null) and (.comments.nodes[0].author.login == $a) and (.comments.nodes[0].createdAt > $rv.createdAt))}] as $th
+         | {
          pr: .number, draft: .isDraft, mergeable, branch: .headRefName,
-         ci: .commits.nodes[0].commit.statusCheckRollup.state,
+         ci: (.commits.nodes[0].commit.statusCheckRollup.state // "KEINE"),
          last_commit: .commits.nodes[0].commit.committedDate,
-         review: ([.reviews.nodes[] | select(.body | startswith("## Review")) | {at: .createdAt, verdict: (.body | capture("Empfehlung: (?<v>mergebar|nachbessern)").v? // "?")}] | last),
-         open_threads: ([.reviewThreads.nodes[] | select(.isResolved | not)] | length)}]}'
+         review: (if $rv then {at: $rv.createdAt, verdict: ($rv.body | capture("Empfehlung: (?<v>mergebar nach manueller Pruefung|mergebar|nachbessern)").v? // "?")} else null end),
+         open_threads: ([$th[] | select(.answered | not)] | length),
+         answered_threads: ([$th[] | select(.answered)] | length)}]}'
    ```
 
    Pull Requests werden ueber `Closes #<nr>` mit dem Issue verknuepft. Findet
@@ -63,14 +68,25 @@ Sind Issues abgeschaltet, sage das und beende den Durchgang.
    `feature/<nr>-*`:
    `gh pr list --repo <Ziel-Repo> --state open --json number,headRefName --jq '.[] | select(.headRefName | startswith("feature/<nr>-"))'`
 
+   Felder, die die Phase bestimmen:
+   - `ci`: `KEINE` heisst, im Repository ist keine CI eingerichtet - das ist
+     kein Fehler.
+   - `open_threads`: nicht aufgeloeste Threads, die **noch nicht beantwortet**
+     sind.
+   - `answered_threads`: nicht aufgeloeste Threads, deren letzter Kommentar vom
+     PR-Autor stammt und nach dem letzten `## Review` liegt - typischerweise
+     von `/address-review` beantwortet. Sie blockieren nicht; aufloesen muss sie
+     der Reviewer.
+
 2. **Phase bestimmen.** Pruefe die Regeln **von oben nach unten**; die erste,
    die zutrifft, gilt:
 
    | Phase | Bedingung | Naechster Befehl |
    |---|---|---|
-   | *Mergebar* | PR vorhanden, letztes `## Review` sagt *mergebar*, Review juenger als `last_commit`, CI `SUCCESS` oder ohne Checks, keine offenen Threads, `mergeable` nicht `CONFLICTING` | Merge durch den Nutzer |
+   | *Mergebar* | PR vorhanden, letztes `## Review` sagt *mergebar*, Review juenger als `last_commit`, CI `SUCCESS` oder `KEINE`, `open_threads` 0, `mergeable` nicht `CONFLICTING` | Merge durch den Nutzer |
+   | *Manuelle Pruefung* | wie *Mergebar*, aber das Review sagt *mergebar nach manueller Pruefung* | die Pruefungen aus `### Manuelle Pruefung` im Review von Hand durchfuehren, dann Merge |
    | *Konflikt* | PR vorhanden, `mergeable` ist `CONFLICTING` | Ziel-Branch in den PR-Branch holen, dann `/review-pr <pr>` |
-   | *Nachbessern* | PR vorhanden und: CI `FAILURE`/`ERROR`, oder letztes Review sagt *nachbessern*, oder offene Threads | `/address-review <pr>` |
+   | *Nachbessern* | PR vorhanden und: CI `FAILURE`/`ERROR`, oder `open_threads` > 0, oder das letzte Review sagt *nachbessern* **und** ist juenger als `last_commit` | `/address-review <pr>` |
    | *Review veraltet* | PR vorhanden, Review aelter als `last_commit` | `/review-pr <pr>` |
    | *Review offen* | PR vorhanden, kein `## Review` | `/review-pr <pr>` (bei Entwurf: erst fertigstellen) |
    | *Plan veraltet* | Plan vorhanden und `last_comment` oder `body_edited` nach `plan` | `/replan-item <nr>` |
@@ -80,6 +96,10 @@ Sind Issues abgeschaltet, sage das und beende den Durchgang.
 
    CI `PENDING` vermerkst du als "Checks laufen" und nimmst die Phase, die
    ohne CI-Bedingung zutrifft.
+
+   Ein Review mit *nachbessern*, nach dem schon wieder committet wurde, gilt
+   als *Review veraltet* - die Nachbesserung ist dann erfolgt und muss geprueft
+   werden, nicht erneut gemacht.
 
    Offene Punkte, die einen *Vorschlag* enthalten, blockieren nicht:
    `/implement-item` uebernimmt den Vorschlag. Nenne sie in der Detailansicht
@@ -92,7 +112,9 @@ Sind Issues abgeschaltet, sage das und beende den Durchgang.
      mit der Anzahl.
    - **Detailansicht:** Phase, alle Zeitstempel (Plan, letzter Kommentar,
      letzter Commit, letztes Review), Plan-Version aus der
-     *Aenderungshistorie*, offene Punkte des Plans, CI-Status, offene Threads
+     *Aenderungshistorie*, offene Punkte des Plans, CI-Status, offene und
+     beantwortete Threads (beantwortete mit dem Hinweis, dass der Reviewer sie
+     aufloesen sollte)
      und der naechste Befehl mit kurzer Begruendung.
 
 ## Regeln

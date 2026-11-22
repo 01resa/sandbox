@@ -55,7 +55,9 @@ Den Wert `Ziel-Repo` (`<owner>/<repo>`) gibst du bei **jedem** `gh`-Aufruf mit
      ```
 
      Die `databaseId` des **ersten** Kommentars eines Threads brauchst du
-     spaeter fuer die Antwort.
+     spaeter fuer die Antwort. Threads, deren letzter Kommentar vom PR-Autor
+     stammt und nach dem letzten `## Review` liegt, sind bereits beantwortet -
+     nenne sie, bearbeite sie aber nicht erneut.
 
    - **Rote Checks:**
 
@@ -64,6 +66,9 @@ Den Wert `Ziel-Repo` (`<owner>/<repo>`) gibst du bei **jedem** `gh`-Aufruf mit
      gh run list --repo <Ziel-Repo> --branch <headRefName> --limit 5
      gh run view <run-id> --repo <Ziel-Repo> --log-failed
      ```
+
+   Meldet `gh pr checks` "no checks reported", ist keine CI eingerichtet - das
+   ist kein offener Punkt.
 
    Gibt es nichts Offenes, melde das und verweise auf `/review-pr <pr>` fuer
    eine erneute Pruefung.

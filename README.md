@@ -311,7 +311,9 @@ an, arbeitet die Schritte ab, laesst Tests und Linter laufen, committet mit
 `/tmp` - der eigene Arbeitsstand bleibt unberuehrt - gegen Akzeptanzkriterien
 und Plan, auf Korrektheit, Tests und Sicherheit. Das Ergebnis ist ein Review,
 das mit `## Review` beginnt, eine Abdeckungstabelle, Befunde als *Blocker*,
-*Sollte* oder *Hinweis* und die Empfehlung *mergebar* oder *nachbessern*.
+*Sollte* oder *Hinweis* und eine Empfehlung: *mergebar*, *mergebar nach
+manueller Pruefung* (kein Blocker, aber eine Pruefung, die nur ein Mensch machen
+kann, etwa unter Windows) oder *nachbessern*.
 
 Das Review wird immer als Kommentar eingestellt: Laeuft alles ueber dasselbe
 Token, ist man meist selbst Autor des PRs, und GitHub erlaubt bei eigenen PRs
@@ -321,15 +323,16 @@ weder *Approve* noch *Request changes*.
 Reviews, offene Threads und rote CI-Checks, schlaegt je Punkt *umsetzen*,
 *widersprechen* oder *zurueckstellen* vor, committet die Korrekturen auf den
 PR-Branch und beantwortet jeden Thread. Aufgeloest werden die Threads vom
-Reviewer, nicht vom Befehl. Danach wieder `/review-pr 57`, bis die Empfehlung
-*mergebar* lautet.
+Reviewer, nicht vom Befehl; beantwortete Threads blockieren aber nicht mehr.
+Danach wieder `/review-pr 57` - es bewertet auch die Antworten in den Threads -,
+bis die Empfehlung *mergebar* lautet.
 
 **7. Mergen** bleibt Handarbeit - im Browser oder mit `gh pr merge`.
 
 **Jederzeit:** `/item-status` zeigt alle offenen Issues mit Phase
 (*Ungeplant*, *Geplant*, *Plan veraltet*, *Wartet auf Antwort*, *Review offen*,
-*Review veraltet*, *Nachbessern*, *Konflikt*, *Mergebar*) und dem naechsten
-Befehl; `/item-status 42` zeigt ein Issue im Detail.
+*Review veraltet*, *Nachbessern*, *Konflikt*, *Manuelle Pruefung*, *Mergebar*)
+und dem naechsten Befehl; `/item-status 42` zeigt ein Issue im Detail.
 
 Alle Befehle liegen als Textdateien in `config/commands/` und gelten fuer beide
 Agenten gleichermassen - siehe [Geteilte Befehle](#geteilte-befehle).
